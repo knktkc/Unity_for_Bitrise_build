@@ -1,10 +1,11 @@
 ---
-format_version: 1.3.1
+format_version: '6'
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
 trigger_map:
-- push_branch: "*"
+- push_branch: develop
   workflow: primary
-- pull_request_source_branch: "*"
+- pull_request_source_branch: develop
+  pull_request_target_branch: feature/*
   workflow: primary
 workflows:
   primary:
@@ -16,61 +17,40 @@ workflows:
         title: Download & Install Unity
         inputs:
         - content: |-
-            #!/bin/bash
             set -ex
 
-            #download unity pkg
-            curl -o ./unity.pkg http://download.unity3d.com/download_unity/38b4efef76f0/MacEditorInstaller/Unity-5.5.0f3.pkg
+            curl -o ./unity.pkg http://download.unity3d.com/download_unity/787658998520/MacEditorInstaller/Unity.pkg
 
-            #download android support platform
-            curl -o ./android.pkg http://download.unity3d.com/download_unity/38b4efef76f0/MacEditorTargetInstaller/UnitySetup-Android-Support-for-Editor-5.5.0f3.pkg
+            curl -o ./android.pkg http://download.unity3d.com/download_unity/787658998520/MacEditorTargetInstaller/UnitySetup-Android-Support-for-Editor-2018.2.0f2.pkg
 
-            #download iOS android support
-            curl -o ./ios.pkg http://download.unity3d.com/download_unity/38b4efef76f0/MacEditorTargetInstaller/UnitySetup-iOS-Support-for-Editor-5.5.0f3.pkg
-
-            #install unity pkg
             sudo -S installer -package ./unity.pkg -target / -verbose
 
-            #install unity android support pkg
             sudo -S installer -package ./android.pkg -target / -verbose
-
-            # #install unity iOS support pkg
-            # sudo -S installer -package ./ios.pkg -target / -verbose
     - script@1.1.5:
         title: Activate Unity
         inputs:
         - content: |-
-            #!/bin/bash
-            # fail if any commands fails
             set -ex
 
             /Applications/Unity/Unity.app/Contents/MacOS/Unity -logfile &
-            sleep 15
+            sleep 30
             sudo killall Unity
 
-            /Applications/Unity/Unity.app/Contents/MacOS/Unity -quit -batchmode -serial $UNITY_SERIAL -username $UNITY_EMAIL -password $UNITY_PW -logfile
+            /Applications/Unity/Unity.app/Contents/MacOS/Unity -quit -batchmode -projectPath "$BITRISE_SOURCE_DIR" -serial $UNITY_SERIAL -username $UNITY_EMAIL -password $UNITY_PW -logfile
     - script@1.1.5:
         title: Build Android
         inputs:
         - content: |-
-            #!/bin/bash
-            # fail if any commands fails
             set -ex
 
-            /Applications/Unity/Unity.app/Contents/MacOS/Unity -nographics -quit -batchmode -logFile -projectPath "$BITRISE_SOURCE_DIR" -executeMethod BitriseUnity.Build -androidSdkPath "$ANDROID_HOME" -buildOutput "$BITRISE_DEPLOY_DIR/mygame.apk" -buildPlatform android
+            /Applications/Unity/Unity.app/Contents/MacOS/Unity -nographics -quit -batchmode -logFile -projectPath "$BITRISE_SOURCE_DIR" -executeMethod BitriseUnity.Build -androidSdkPath "$ANDROID_HOME" -buildOutput "$BITRISE_DEPLOY_DIR/ShimajiroAmazon.apk" -buildPlatform android
     - script@1.1.5:
         title: Return Unity license
         is_always_run: true
         inputs:
         - content: |-
-            #!/bin/bash
-            # fail if any commands fails
             set -ex
 
-            /Applications/Unity/Unity.app/Contents/MacOS/Unity -quit -batchmode -logFile -returnlicense
+            /Applications/Unity/Unity.app/Contents/MacOS/Unity -quit -noUpm -batchmode -logFile -returnlicense
+    - certificate-and-profile-installer@1.10.1: {}
     - deploy-to-bitrise-io@1.3.18: {}
-    envs:
-    - UNITY_SERIAL: SC-KESV-DRTM-C4EF-EU5R-2CZB
-    - UNITY_EMAIL: devadmin@xtone.co.jp
-    - UNITY_PW: Xtone8877
-
